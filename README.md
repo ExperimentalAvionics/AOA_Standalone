@@ -2,6 +2,8 @@
 
 This is a standalone self-contained angle of attack indicator designed to be used in an experimental aircraft.
 
+Just like most of the units in this project the Angle of Attack indicator is based on Arduino Nano and is very cheap to build.
+
 The indicator requires pitot tube that contains an additional port tilted 60 degrees off the main pitot port axis. The concept is very similar to the Dynon units. So Dynon’s AoA pitot tube can be used for this indicator.
 Another good option is a blade type pitot that is very common on Piper Cherokees. It requires a small modification - the hole at the back of the blade should be closed.
 
