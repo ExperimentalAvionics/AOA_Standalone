@@ -24,7 +24,7 @@ int FlapsPosition = 0;        // Flaps position 0 - no flaps, 1 - first stage, e
 
 float AOA = 0;
 float Xaoa = 0;    // Temporary variable for Pias/Paoa
-float AOAmin = -2;   // Min AoA (for display - turns blue and green LEDs on at Zero AoA)
+float AOAmin = -1;   // Min AoA (Zero Lift for NACA 23012) (for display - turns blue and green LEDs on at Zero AoA)
 float AOAmax = 15;   // Stall AoA
 float AOAbg = 4.8;     // Best Glide AoA (Top Green LED is on)
 float A, B;        // linear funclion coefficients for calculating AoA = A*Xaoa + B
@@ -62,7 +62,15 @@ unsigned int ArrayIndex = 0;
 
 void setup() 
 {
-   Serial.begin(115200);    
+   Serial.begin(115200);
+
+// pins for detecting flaps position
+// Assumption is that flaps position sensed by groubding some pins with a a few vane tipe swithes
+// Alternatively the A0, A4, or A5 can be easily configured to sense voltage from a resistive positioner.
+  pinMode(14, INPUT_PULLUP); // A0 - D-SUB - 2
+  pinMode(18, INPUT_PULLUP); // A4 - D-SUB - 3
+  pinMode(19, INPUT_PULLUP); // A5 - D-SUB - 7
+
 // init the pins 2-11
   for (int i = 2; i <= 12; i++) {
     pinMode(i, OUTPUT);  
@@ -80,16 +88,16 @@ void setup()
 
 // Read the calibrations values from EEPROM and calculate the linear function coefficients
 // hardcoded values for now
-   Xzero[0] = 1.6934;
+   Xzero[0] = 1.6752;
    Xstall[0] = 1.967;
 
-   Xzero[1] = 1.6934;
+   Xzero[1] = 1.6752;
    Xstall[1] = 1.967;
 
-   Xzero[2] = 1.6934;
+   Xzero[2] = 1.6752;
    Xstall[2] = 1.967;
 
-   Xzero[3] = 1.6934;
+   Xzero[3] = 1.6752;
    Xstall[3] = 1.967;
 
    Serial.print("AOA_RAW");
@@ -108,12 +116,22 @@ void setup()
 
 void loop()
 {
-
+ 
 // Read Flaps position  
  FlapsPosition = 0;
 
- A = (float)AOAmax / (Xstall[FlapsPosition] - Xzero[FlapsPosition]);
- B = (-1) * A * Xzero[FlapsPosition];
+ if (digitalRead(14) == LOW) {
+  FlapsPosition = 1;
+ }
+ if (digitalRead(18) == LOW) {
+  FlapsPosition = 2;
+ }
+ if (digitalRead(19) == LOW) {
+  FlapsPosition = 3;
+ }
+
+ A = (AOAmax - AOAmin) / (Xstall[FlapsPosition] - Xzero[FlapsPosition]);
+ B = AOAmin - (A * Xzero[FlapsPosition]);
 
 // Read sensors
   IAS_RAW_Input = analogRead(A7); 
