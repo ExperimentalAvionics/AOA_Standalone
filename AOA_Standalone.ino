@@ -35,14 +35,14 @@ float Pmin = 15; // Minimum differeretial pressure to activate the unit.
 
 // AoA differential sensor
 unsigned int AOArefMin = 5;    // Minimum reading from the sensor. For some reason it is never 0
-unsigned int AOArefHalf = 534; // Sensor reading at Zero airspeed
+unsigned int AOArefHalf = 532; // Sensor reading at Zero airspeed
 unsigned int AOArefMax = 1015; // Maximum reading from the sensor. For some reason it is never 1023
 unsigned int AOAMaxPressure = 2000; // max differential pressure for the installed sensor
                                     // for MPXV7002 - 2000 Pa (~110 Knots)
                                     // for MPXV5010 - 10000 pa (~248 Knots)
 // IAS differential sensor
 unsigned int IASrefMin = 6;    // Minimum reading from the sensor. For some reason it is never 0
-unsigned int IASrefHalf = 535; // Sensor reading at Zero airspeed
+unsigned int IASrefHalf = 532; // Sensor reading at Zero airspeed
 unsigned int IASrefMax = 1015; // Maximum reading from the sensor. For some reason it is never 1023
 unsigned int IASMaxPressure = 2000; // max differential pressure for the installed sensor
                                     // for MPXV7002 - 2000 Pa (~110 Knots)
@@ -53,12 +53,19 @@ unsigned int IAS_RAW_Input = 0;
 float Pias = 0, Paoa = 0; // Differential pressure from the sensors
 
 // two arrays for moving avarage
-#define ArraySize 300 // play with the value - greater value display is less sensitive to change, smaller value - display becomes jumpy
+#define ArraySize 200 // play with the value - greater value display is less sensitive to change, smaller value - display becomes jumpy
 unsigned int RAWiasArray[ArraySize];
 unsigned long RAWiasArraySum =0;
 unsigned int RAWaoaArray[ArraySize];
 unsigned long RAWaoaArraySum =0;
 unsigned int ArrayIndex = 0;
+
+// smooth display
+#define DisplayArraySize 100
+float DisplayArray[DisplayArraySize];
+float DisplayArraySum = 0;
+int DisplayArrayIndex = 0;
+
 
 void setup() 
 {
@@ -86,7 +93,7 @@ void setup()
 
   digitalWrite(12, LOW); 
 
-// Read the calibrations values from EEPROM and calculate the linear function coefficients
+// Read the calibrations values from EEPROM 
 // hardcoded values for now
    Xzero[0] = 1.6752;
    Xstall[0] = 1.967;
@@ -107,6 +114,8 @@ void setup()
    Serial.print("Paoa");
    Serial.print("\t");
    Serial.print("Pias");
+   Serial.print("\t");
+   Serial.print("Pias/Paoa");
    Serial.print("\t");
    Serial.print("IAS");
    Serial.print("\t");
@@ -130,6 +139,7 @@ void loop()
   FlapsPosition = 3;
  }
 
+// Calculate the linear function coefficients for the given flaps position
  A = (AOAmax - AOAmin) / (Xstall[FlapsPosition] - Xzero[FlapsPosition]);
  B = AOAmin - (A * Xzero[FlapsPosition]);
 
@@ -193,6 +203,19 @@ void loop()
     AOA = AOAmax;
   }
 
+// smooth the display a bit usin Moving Average
+  DisplayArraySum -= DisplayArray[DisplayArrayIndex];
+  DisplayArray[DisplayArrayIndex] = AOA;
+  DisplayArraySum += DisplayArray[DisplayArrayIndex];
+  AOA = DisplayArraySum / DisplayArraySize;
+
+  DisplayArrayIndex++; // shift the index for next time
+  if (DisplayArrayIndex == DisplayArraySize) {  // if we reached the top of the array
+    DisplayArrayIndex = 0;                       //go to the start of the array
+  }
+
+
+
   if (AOA > AOAbg) {
     topLED = map(AOA,AOAbg, AOAmax, 6, 2); // map function is weird sometimes. Watch out!
   } else {
@@ -219,6 +242,8 @@ void loop()
       Serial.print(Paoa);
       Serial.print("\t");
       Serial.print(Pias);
+      Serial.print("\t");
+      Serial.print(Pias/Paoa);
       Serial.print("\t");
       Serial.print(3600.0*sqrt(2*Pias/1.225)/1852.0);
       Serial.print("\t");
